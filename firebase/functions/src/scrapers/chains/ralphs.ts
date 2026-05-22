@@ -1,14 +1,14 @@
 import type { NearbyStore, SaleItem } from "@grocery-deals/shared";
 import { scrapeKrogerFamilyWeeklyAd } from "./kroger.js";
 
-const MARIANOS_WEEKLY_AD_URL = "https://www.marianos.com/weeklyad";
+const RALPHS_WEEKLY_AD_URL = "https://www.ralphs.com/weeklyad";
 
-export async function scrapeMarianosWeeklyAd(store: NearbyStore): Promise<SaleItem[]> {
+export async function scrapeRalphsWeeklyAd(store: NearbyStore): Promise<SaleItem[]> {
   const response = await scrapeKrogerFamilyWeeklyAd({
-    brand: "marianos",
-    displayName: "Mariano's",
+    brand: "ralphs",
+    displayName: "Ralphs",
     storeId: store.id,
-    sourceUrl: MARIANOS_WEEKLY_AD_URL,
+    sourceUrl: RALPHS_WEEKLY_AD_URL,
   });
 
   return response.deals.map((deal, index) => ({

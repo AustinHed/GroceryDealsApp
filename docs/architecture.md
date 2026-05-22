@@ -28,6 +28,8 @@ The web and iOS apps should call Firebase Functions rather than duplicating busi
 
 Scrapers stay separated by chain under `firebase/functions/src/scrapers/chains`. Each scraper exposes the same internal contract: accept a normalized store object and return normalized `SaleItem[]`. Chain-specific details, including store ID format validation and source-specific parsing, stay inside the scraper module.
 
+Kroger-family banners share a common Digital Ads implementation. The individual Kroger, Mariano's, Fred Meyer, QFC, and Ralphs modules provide banner-specific source URLs and display metadata so normalized responses keep the selected brand identity.
+
 The coordinator owns cross-chain behavior:
 
 - request validation and the three-store limit
@@ -36,4 +38,4 @@ The coordinator owns cross-chain behavior:
 - one retry per failed scraper
 - partial-success responses when one store fails but others succeed
 
-The older `scrapeRuns` endpoint is a Kroger-only proof-of-concept. New client flows should use `getWeeklyDeals`.
+The older `scrapeRuns` endpoint is a Kroger-family proof-of-concept. New client flows should use `getWeeklyDeals`.

@@ -31,4 +31,4 @@ docs/           Architecture and API planning notes
 
 ## Current Scope
 
-The current web app includes the initial homepage, a Kroger weekly ad scraper POC, and a weekly deals coordinator test surface for dispatching up to three selected stores to chain-specific scraper modules. Store lookup, production meal planning, and login gating are future work.
+The current web app includes the initial homepage, a Kroger-family weekly ad scraper POC, and a weekly deals coordinator test surface for dispatching up to three selected stores to chain-specific scraper modules. Supported Kroger-family banners include Kroger, Mariano's, Fred Meyer, QFC, and Ralphs. Store lookup, production meal planning, and login gating are future work.

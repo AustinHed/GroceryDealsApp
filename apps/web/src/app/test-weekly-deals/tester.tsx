@@ -16,6 +16,9 @@ type StoreRow = {
 const STORE_ROWS: StoreRow[] = [
   { company: "kroger", label: "Kroger", placeholder: "01400413", storeId: "" },
   { company: "marianos", label: "Mariano's", placeholder: "53100531", storeId: "" },
+  { company: "fred-meyer", label: "Fred Meyer", placeholder: "70100125", storeId: "" },
+  { company: "qfc", label: "QFC", placeholder: "70500807", storeId: "" },
+  { company: "ralphs", label: "Ralphs", placeholder: "70300703", storeId: "" },
 ];
 
 const EMPTY_RESULT = {
