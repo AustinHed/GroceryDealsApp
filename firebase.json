@@ -1,0 +1,17 @@
+{
+  "functions": [
+    {
+      "source": "firebase/functions",
+      "codebase": "default",
+      "runtime": "nodejs22",
+      "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log"]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": "apps/web/.next",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  }
+}

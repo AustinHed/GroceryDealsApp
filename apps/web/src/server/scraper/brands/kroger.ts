@@ -1,12 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type {
-  DiscountType,
-  NearbyStore,
-  SaleItem,
-  ScrapeWeeklyAdResponse,
-  WeeklyAdDeal,
-  WeeklyAdDealSummary,
-} from "@grocery-deals/shared";
+import type { DiscountType, ScrapeWeeklyAdResponse, WeeklyAdDeal, WeeklyAdDealSummary } from "@grocery-deals/shared";
 
 type KrogerStoreContext = {
   locationId: string;
@@ -81,7 +74,7 @@ type KrogerDealsResponse = {
 const KROGER_WEEKLY_AD_URL = "https://www.kroger.com/weeklyad";
 const KROGER_DIGITAL_ADS_API = "https://api.kroger.com/digitalads/v1";
 
-export async function scrapeKrogerWeeklyAdByStoreId(storeId: string): Promise<ScrapeWeeklyAdResponse> {
+export async function scrapeKrogerWeeklyAd(storeId: string): Promise<ScrapeWeeklyAdResponse> {
   const scrapedAt = new Date().toISOString();
   const store = parseKrogerStoreId(storeId);
   const headers = krogerApiHeaders(store.locationId);
@@ -121,18 +114,6 @@ export async function scrapeKrogerWeeklyAdByStoreId(storeId: string): Promise<Sc
         : `Kroger returned the circular but no ads for division ${store.divisionId}, store ${store.storeCode}.`,
     },
   };
-}
-
-export async function scrapeKrogerWeeklyAd(store: NearbyStore): Promise<SaleItem[]> {
-  const response = await scrapeKrogerWeeklyAdByStoreId(store.id);
-
-  return response.deals.map((deal, index) => ({
-    id: `${store.id}-${index}`,
-    storeId: store.id,
-    name: deal.productName,
-    price: deal.salePriceText ?? "",
-    category: deal.category,
-  }));
 }
 
 function parseKrogerStoreId(storeId: string): KrogerStoreContext {
