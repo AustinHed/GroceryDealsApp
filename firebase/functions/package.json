@@ -1,0 +1,17 @@
+{
+  "name": "@grocery-deals/functions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@grocery-deals/shared": "file:../../packages/shared"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}
