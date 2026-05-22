@@ -1,6 +1,5 @@
 import {
   MAX_NEARBY_STORES,
-  type NearbyStore,
   type SaleItem,
   type SupportedStoreChain,
   type WeeklyDealsRequest,
@@ -8,21 +7,56 @@ import {
   type WeeklyDealsStoreInput,
   type WeeklyDealsStoreResult,
 } from "@grocery-deals/shared";
-import { scrapeAldiWeeklyAd } from "./chains/aldi.js";
-import { scrapeJewelOscoWeeklyAd } from "./chains/jewelOsco.js";
-import { scrapeKrogerWeeklyAd } from "./chains/kroger.js";
 
-type WeeklyAdScraper = (store: NearbyStore) => Promise<SaleItem[]>;
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = ["aldi", "jewel-osco", "kroger"];
 
-const SCRAPERS: Record<SupportedStoreChain, WeeklyAdScraper> = {
-  aldi: scrapeAldiWeeklyAd,
-  "jewel-osco": scrapeJewelOscoWeeklyAd,
-  kroger: scrapeKrogerWeeklyAd,
-};
+export async function POST(request: Request) {
+  let body: unknown;
 
-export function validateWeeklyDealsRequest(body: unknown): WeeklyDealsRequest {
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
+  }
+
+  let weeklyDealsRequest: WeeklyDealsRequest;
+
+  try {
+    weeklyDealsRequest = validateWeeklyDealsRequest(body);
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Invalid weekly deals request." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    if (process.env.WEEKLY_DEALS_COORDINATOR_ENDPOINT) {
+      const upstream = await fetch(process.env.WEEKLY_DEALS_COORDINATOR_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(weeklyDealsRequest),
+      });
+      const payload = await upstream.json();
+
+      return Response.json(payload, { status: upstream.status });
+    }
+
+    return Response.json(await getLocalWeeklyDeals(weeklyDealsRequest));
+  } catch (error) {
+    return Response.json(
+      {
+        error: error instanceof Error ? error.message : "Weekly deals coordinator failed.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+function validateWeeklyDealsRequest(body: unknown): WeeklyDealsRequest {
   if (!isRecord(body) || !Array.isArray(body.stores)) {
     throw new Error("Request body must include a stores array.");
   }
@@ -49,7 +83,7 @@ export function validateWeeklyDealsRequest(body: unknown): WeeklyDealsRequest {
   return { stores };
 }
 
-export async function getWeeklyDeals(request: WeeklyDealsRequest): Promise<WeeklyDealsResponse> {
+async function getLocalWeeklyDeals(request: WeeklyDealsRequest): Promise<WeeklyDealsResponse> {
   const requestedAt = new Date().toISOString();
   const results = await Promise.all(request.stores.map((store) => scrapeStoreWithRetry(store)));
   const dealCount = results.reduce((total, result) => {
@@ -65,7 +99,7 @@ export async function getWeeklyDeals(request: WeeklyDealsRequest): Promise<Weekl
 
 async function scrapeStoreWithRetry(store: WeeklyDealsStoreInput): Promise<WeeklyDealsStoreResult> {
   try {
-    const deals = await runScraper(store);
+    const deals = await runLocalScraper(store);
     return {
       company: store.company,
       storeId: store.storeId,
@@ -75,7 +109,7 @@ async function scrapeStoreWithRetry(store: WeeklyDealsStoreInput): Promise<Weekl
     };
   } catch (firstError) {
     try {
-      const deals = await runScraper(store);
+      const deals = await runLocalScraper(store);
       return {
         company: store.company,
         storeId: store.storeId,
@@ -94,15 +128,21 @@ async function scrapeStoreWithRetry(store: WeeklyDealsStoreInput): Promise<Weekl
   }
 }
 
-async function runScraper(store: WeeklyDealsStoreInput): Promise<SaleItem[]> {
-  const scraper = SCRAPERS[store.company];
+async function runLocalScraper(store: WeeklyDealsStoreInput): Promise<SaleItem[]> {
+  if (store.company !== "kroger") {
+    return [];
+  }
 
-  return scraper({
-    id: store.storeId,
-    chain: store.company,
-    name: store.company,
-    address: "",
-  });
+  const { scrapeKrogerWeeklyAd } = await import("@/server/scraper/brands/kroger");
+  const response = await scrapeKrogerWeeklyAd(store.storeId);
+
+  return response.deals.map((deal, index) => ({
+    id: `${store.storeId}-${index}`,
+    storeId: store.storeId,
+    name: deal.productName,
+    price: deal.salePriceText ?? "",
+    category: deal.category,
+  }));
 }
 
 function normalizeStoreInput(store: unknown, index: number): WeeklyDealsStoreInput {
