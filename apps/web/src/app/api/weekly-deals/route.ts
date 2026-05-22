@@ -1,7 +1,7 @@
 import {
   MAX_NEARBY_STORES,
-  type SaleItem,
   type SupportedStoreChain,
+  type WeeklyAdDealSummary,
   type WeeklyDealsRequest,
   type WeeklyDealsResponse,
   type WeeklyDealsStoreInput,
@@ -11,7 +11,7 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = ["aldi", "jewel-osco", "kroger"];
+const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = ["kroger", "marianos"];
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -128,21 +128,17 @@ async function scrapeStoreWithRetry(store: WeeklyDealsStoreInput): Promise<Weekl
   }
 }
 
-async function runLocalScraper(store: WeeklyDealsStoreInput): Promise<SaleItem[]> {
-  if (store.company !== "kroger") {
-    return [];
-  }
+async function runLocalScraper(store: WeeklyDealsStoreInput): Promise<WeeklyAdDealSummary[]> {
+  const response =
+    store.company === "marianos"
+      ? await import("@/server/scraper/brands/marianos").then(({ scrapeMarianosWeeklyAd }) =>
+          scrapeMarianosWeeklyAd(store.storeId),
+        )
+      : await import("@/server/scraper/brands/kroger").then(({ scrapeKrogerWeeklyAd }) =>
+          scrapeKrogerWeeklyAd(store.storeId),
+        );
 
-  const { scrapeKrogerWeeklyAd } = await import("@/server/scraper/brands/kroger");
-  const response = await scrapeKrogerWeeklyAd(store.storeId);
-
-  return response.deals.map((deal, index) => ({
-    id: `${store.storeId}-${index}`,
-    storeId: store.storeId,
-    name: deal.productName,
-    price: deal.salePriceText ?? "",
-    category: deal.category,
-  }));
+  return response.deals;
 }
 
 function normalizeStoreInput(store: unknown, index: number): WeeklyDealsStoreInput {

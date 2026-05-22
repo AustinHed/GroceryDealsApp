@@ -3,7 +3,6 @@ import Link from "next/link";
 const tabs = [
   { href: "/", label: "home" },
   { href: "/test-weekly-deals", label: "test - weekly deals" },
-  { href: "/test-kroger-deals", label: "test - kroger deals" },
 ];
 
 export function TopTabs() {

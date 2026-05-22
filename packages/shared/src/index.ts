@@ -5,7 +5,7 @@ export type AddressInput = {
   postalCode?: string;
 };
 
-export type SupportedStoreChain = "aldi" | "jewel-osco" | "kroger";
+export type SupportedStoreChain = "aldi" | "jewel-osco" | "kroger" | "marianos";
 
 export type NearbyStore = {
   id: string;
@@ -123,7 +123,7 @@ export type WeeklyDealsStoreSuccess = {
   company: SupportedStoreChain;
   storeId: string;
   status: "succeeded";
-  deals: SaleItem[];
+  deals: Array<SaleItem | WeeklyAdDealSummary>;
   dealCount: number;
 };
 
