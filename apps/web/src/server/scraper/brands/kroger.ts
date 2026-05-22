@@ -235,7 +235,6 @@ function normalizeDeals(
   const seen = new Set<string>();
 
   return ads
-    .filter((ad) => isAdAvailableAtStore(ad, context.store))
     .map((ad) => {
       const groups = (ad.adGroups ?? []).map((id) => adGroups.get(id)).filter(Boolean) as KrogerAdGroup[];
       const rawText = buildRawText(ad, groups);
@@ -358,15 +357,6 @@ function buildAdGroupLookup(groups: KrogerAdGroup[]): Map<string, KrogerAdGroup>
   }
 
   return lookup;
-}
-
-function isAdAvailableAtStore(ad: KrogerAd, store: KrogerStoreContext): boolean {
-  if (!ad.stores?.length) return true;
-
-  return ad.stores.some((entry) => {
-    const storeId = typeof entry === "string" ? entry : entry.storeId;
-    return storeId === store.storeCode || storeId === store.locationId;
-  });
 }
 
 function isDigitalCouponGroup(group: KrogerAdGroup): boolean {
