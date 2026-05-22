@@ -16,7 +16,7 @@ The backend API will be implemented with Firebase Functions and shared by the we
 
 ## `getWeeklyDeals`
 
-`getWeeklyDeals` is the multi-store weekly ad coordinator. It replaces the Kroger-only `scrapeRuns` proof-of-concept for new client work.
+`getWeeklyDeals` is the multi-store weekly ad coordinator. It replaces the older `scrapeRuns` proof-of-concept for new client work.
 
 ### Request
 
@@ -32,8 +32,9 @@ The backend API will be implemented with Firebase Functions and shared by the we
 ```
 
 - `stores` is required and must include 1-3 stores.
-- `company` must be one of `kroger`, `aldi`, or `jewel-osco`.
+- `company` must be one of `aldi`, `jewel-osco`, `kroger`, `marianos`, `fred-meyer`, `qfc`, or `ralphs`.
 - `storeId` is the chain-specific store identifier. Chain-specific validation belongs inside that chain scraper.
+- Kroger-family banners (`kroger`, `marianos`, `fred-meyer`, `qfc`, `ralphs`) use the 8-digit Kroger `locationId` store identifier.
 - Duplicate `company + storeId` entries are rejected.
 
 ### Response
@@ -76,3 +77,7 @@ The backend API will be implemented with Firebase Functions and shared by the we
 ### Web Proxy
 
 The Next.js web app exposes `/api/weekly-deals` as a server-side proxy for the browser. In deployed environments, set `WEEKLY_DEALS_COORDINATOR_ENDPOINT` to the Firebase `getWeeklyDeals` HTTP function URL. If the variable is absent, the route uses a local fallback for development and POC testing.
+
+### Kroger-Family Scrapers
+
+Kroger, Mariano's, Fred Meyer, QFC, and Ralphs share the Kroger Digital Ads scraper implementation. Each brand module supplies its own weekly ad URL and brand metadata while reusing the same circular lookup, deal normalization, and retry behavior.

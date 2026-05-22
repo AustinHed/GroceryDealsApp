@@ -11,7 +11,7 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = ["kroger", "marianos"];
+const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = ["kroger", "marianos", "fred-meyer", "qfc", "ralphs"];
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -129,16 +129,34 @@ async function scrapeStoreWithRetry(store: WeeklyDealsStoreInput): Promise<Weekl
 }
 
 async function runLocalScraper(store: WeeklyDealsStoreInput): Promise<WeeklyAdDealSummary[]> {
-  const response =
-    store.company === "marianos"
-      ? await import("@/server/scraper/brands/marianos").then(({ scrapeMarianosWeeklyAd }) =>
-          scrapeMarianosWeeklyAd(store.storeId),
-        )
-      : await import("@/server/scraper/brands/kroger").then(({ scrapeKrogerWeeklyAd }) =>
-          scrapeKrogerWeeklyAd(store.storeId),
-        );
+  const response = await scrapeKrogerFamilyBrand(store);
 
   return response.deals;
+}
+
+async function scrapeKrogerFamilyBrand(store: WeeklyDealsStoreInput) {
+  switch (store.company) {
+    case "fred-meyer":
+      return import("@/server/scraper/brands/fredMeyer").then(({ scrapeFredMeyerWeeklyAd }) =>
+        scrapeFredMeyerWeeklyAd(store.storeId),
+      );
+    case "marianos":
+      return import("@/server/scraper/brands/marianos").then(({ scrapeMarianosWeeklyAd }) =>
+        scrapeMarianosWeeklyAd(store.storeId),
+      );
+    case "qfc":
+      return import("@/server/scraper/brands/qfc").then(({ scrapeQfcWeeklyAd }) => scrapeQfcWeeklyAd(store.storeId));
+    case "ralphs":
+      return import("@/server/scraper/brands/ralphs").then(({ scrapeRalphsWeeklyAd }) =>
+        scrapeRalphsWeeklyAd(store.storeId),
+      );
+    case "kroger":
+      return import("@/server/scraper/brands/kroger").then(({ scrapeKrogerWeeklyAd }) =>
+        scrapeKrogerWeeklyAd(store.storeId),
+      );
+    default:
+      throw new Error(`Unsupported local scraper for ${store.company}.`);
+  }
 }
 
 function normalizeStoreInput(store: unknown, index: number): WeeklyDealsStoreInput {

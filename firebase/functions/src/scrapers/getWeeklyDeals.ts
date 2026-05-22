@@ -9,19 +9,33 @@ import {
   type WeeklyDealsStoreResult,
 } from "@grocery-deals/shared";
 import { scrapeAldiWeeklyAd } from "./chains/aldi.js";
+import { scrapeFredMeyerWeeklyAd } from "./chains/fredMeyer.js";
 import { scrapeJewelOscoWeeklyAd } from "./chains/jewelOsco.js";
 import { scrapeKrogerWeeklyAd } from "./chains/kroger.js";
 import { scrapeMarianosWeeklyAd } from "./chains/marianos.js";
+import { scrapeQfcWeeklyAd } from "./chains/qfc.js";
+import { scrapeRalphsWeeklyAd } from "./chains/ralphs.js";
 
 type WeeklyAdScraper = (store: NearbyStore) => Promise<SaleItem[]>;
 
-const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = ["aldi", "jewel-osco", "kroger", "marianos"];
+const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = [
+  "aldi",
+  "jewel-osco",
+  "kroger",
+  "marianos",
+  "fred-meyer",
+  "qfc",
+  "ralphs",
+];
 
 const SCRAPERS: Record<SupportedStoreChain, WeeklyAdScraper> = {
   aldi: scrapeAldiWeeklyAd,
+  "fred-meyer": scrapeFredMeyerWeeklyAd,
   "jewel-osco": scrapeJewelOscoWeeklyAd,
   kroger: scrapeKrogerWeeklyAd,
   marianos: scrapeMarianosWeeklyAd,
+  qfc: scrapeQfcWeeklyAd,
+  ralphs: scrapeRalphsWeeklyAd,
 };
 
 export function validateWeeklyDealsRequest(body: unknown): WeeklyDealsRequest {

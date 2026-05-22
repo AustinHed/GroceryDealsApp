@@ -1,5 +1,6 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { scrapeKrogerWeeklyAdByStoreId } from "./scrapers/chains/kroger.js";
+import type { GroceryBrand } from "@grocery-deals/shared";
+import { scrapeKrogerFamilyWeeklyAd } from "./scrapers/chains/kroger.js";
 import { getWeeklyDeals as coordinateWeeklyDeals, validateWeeklyDealsRequest } from "./scrapers/getWeeklyDeals.js";
 
 export const scrapeRuns = onRequest(
@@ -17,8 +18,10 @@ export const scrapeRuns = onRequest(
     const brand = request.body?.brand;
     const storeId = String(request.body?.storeId ?? "").trim();
 
-    if (brand !== "kroger") {
-      response.status(400).json({ error: 'Only brand "kroger" is supported by this POC.' });
+    if (!isKrogerFamilyBrand(brand)) {
+      response.status(400).json({
+        error: 'Only Kroger-family brands "kroger", "marianos", "fred-meyer", "qfc", and "ralphs" are supported by this POC.',
+      });
       return;
     }
 
@@ -28,17 +31,34 @@ export const scrapeRuns = onRequest(
     }
 
     try {
-      const result = await scrapeKrogerWeeklyAdByStoreId(storeId);
+      const result = await scrapeKrogerFamilyWeeklyAd({
+        brand,
+        displayName: KROGER_FAMILY_BRANDS[brand].displayName,
+        storeId,
+        sourceUrl: KROGER_FAMILY_BRANDS[brand].sourceUrl,
+      });
       response.json({ deals: result.deals });
     } catch (error) {
       response.status(500).json({
-        brand: "kroger",
+        brand,
         storeId,
         error: error instanceof Error ? error.message : "Unknown scraper error.",
       });
     }
   },
 );
+
+const KROGER_FAMILY_BRANDS = {
+  "fred-meyer": { displayName: "Fred Meyer", sourceUrl: "https://www.fredmeyer.com/weeklyad" },
+  kroger: { displayName: "Kroger", sourceUrl: "https://www.kroger.com/weeklyad" },
+  marianos: { displayName: "Mariano's", sourceUrl: "https://www.marianos.com/weeklyad" },
+  qfc: { displayName: "QFC", sourceUrl: "https://www.qfc.com/weeklyad" },
+  ralphs: { displayName: "Ralphs", sourceUrl: "https://www.ralphs.com/weeklyad" },
+} satisfies Partial<Record<GroceryBrand, { displayName: string; sourceUrl: string }>>;
+
+function isKrogerFamilyBrand(brand: unknown): brand is keyof typeof KROGER_FAMILY_BRANDS {
+  return typeof brand === "string" && brand in KROGER_FAMILY_BRANDS;
+}
 
 export const getWeeklyDeals = onRequest(
   {

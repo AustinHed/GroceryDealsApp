@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type {
   DiscountType,
+  GroceryBrand,
   NearbyStore,
   SaleItem,
   ScrapeWeeklyAdResponse,
@@ -82,35 +83,52 @@ const KROGER_WEEKLY_AD_URL = "https://www.kroger.com/weeklyad";
 const KROGER_DIGITAL_ADS_API = "https://api.kroger.com/digitalads/v1";
 
 export async function scrapeKrogerWeeklyAdByStoreId(storeId: string): Promise<ScrapeWeeklyAdResponse> {
+  return scrapeKrogerFamilyWeeklyAd({
+    brand: "kroger",
+    displayName: "Kroger",
+    storeId,
+    sourceUrl: KROGER_WEEKLY_AD_URL,
+  });
+}
+
+export async function scrapeKrogerFamilyWeeklyAd(options: {
+  brand: GroceryBrand;
+  displayName: string;
+  storeId: string;
+  sourceUrl: string;
+}): Promise<ScrapeWeeklyAdResponse> {
   const scrapedAt = new Date().toISOString();
-  const store = parseKrogerStoreId(storeId);
-  const headers = krogerApiHeaders(store.locationId);
+  const store = parseKrogerStoreId(options.storeId, options.displayName);
+  const headers = krogerApiHeaders(store.locationId, options.sourceUrl);
   const circularsUrl = buildCircularsUrl(store.divisionId);
   const circulars = await fetchKrogerJson<KrogerCircularsResponse>(circularsUrl, headers);
   const circular = selectWeeklyAdCircular(circulars.data ?? []);
 
   if (!circular) {
-    throw new Error(`No shoppable Kroger weekly ad circular was found for division ${store.divisionId}.`);
+    throw new Error(`No shoppable ${options.displayName} weekly ad circular was found for division ${store.divisionId}.`);
   }
 
   const dealsUrl = buildDealsUrl(store, circular.id);
   const dealsResponse = await fetchKrogerJson<KrogerDealsResponse>(dealsUrl, headers);
   const adGroups = buildAdGroupLookup(dealsResponse.data?.adGroups ?? []);
   const normalizedDeals = normalizeDeals(dealsResponse.data?.ads ?? [], adGroups, {
+    brand: options.brand,
+    displayName: options.displayName,
     store,
+    sourceUrl: options.sourceUrl,
     scrapedAt,
   });
   const deals = normalizedDeals.map(toWeeklyAdDealSummary);
 
   return {
-    brand: "kroger",
+    brand: options.brand,
     storeId: store.locationId,
     scrapedAt,
-    sourceUrl: KROGER_WEEKLY_AD_URL,
+    sourceUrl: options.sourceUrl,
     dealCount: deals.length,
     deals,
     diagnostics: {
-      extractionMethod: "kroger-digitalads-api",
+      extractionMethod: `${options.brand}-digitalads-api`,
       divisionId: store.divisionId,
       storeCode: store.storeCode,
       circularId: circular.id,
@@ -118,7 +136,7 @@ export async function scrapeKrogerWeeklyAdByStoreId(storeId: string): Promise<Sc
       apiUrls: [circularsUrl, dealsUrl],
       message: deals.length
         ? undefined
-        : `Kroger returned the circular but no ads for division ${store.divisionId}, store ${store.storeCode}.`,
+        : `${options.displayName} returned the circular but no ads for division ${store.divisionId}, store ${store.storeCode}.`,
     },
   };
 }
@@ -135,11 +153,11 @@ export async function scrapeKrogerWeeklyAd(store: NearbyStore): Promise<SaleItem
   }));
 }
 
-function parseKrogerStoreId(storeId: string): KrogerStoreContext {
+function parseKrogerStoreId(storeId: string, displayName = "Kroger"): KrogerStoreContext {
   const locationId = storeId.trim();
 
   if (!/^\d{8}$/.test(locationId)) {
-    throw new Error("Kroger storeId must be the 8-digit locationId, for example 01400413.");
+    throw new Error(`${displayName} storeId must be the 8-digit locationId, for example 01400413.`);
   }
 
   return {
@@ -149,12 +167,14 @@ function parseKrogerStoreId(storeId: string): KrogerStoreContext {
   };
 }
 
-function krogerApiHeaders(locationId: string): HeadersInit {
+function krogerApiHeaders(locationId: string, sourceUrl: string): HeadersInit {
+  const origin = new URL(sourceUrl).origin;
+
   return {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
-    origin: "https://www.kroger.com",
-    referer: KROGER_WEEKLY_AD_URL,
+    origin,
+    referer: sourceUrl,
     "user-agent":
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "x-call-origin": JSON.stringify({ page: "/weeklyad", component: "weekly ad" }),
@@ -218,7 +238,13 @@ function scoreCircular(circular: KrogerCircular): number {
 function normalizeDeals(
   ads: KrogerAd[],
   adGroups: Map<string, KrogerAdGroup>,
-  context: { store: KrogerStoreContext; scrapedAt: string },
+  context: {
+    brand: GroceryBrand;
+    displayName: string;
+    store: KrogerStoreContext;
+    sourceUrl: string;
+    scrapedAt: string;
+  },
 ): WeeklyAdDeal[] {
   const seen = new Set<string>();
 
@@ -236,9 +262,11 @@ function normalizeDeals(
 
       return {
         id: ad.id ?? randomUUID(),
-        brand: "kroger" as const,
+        brand: context.brand,
         storeId: context.store.locationId,
-        productName: cleanProductName(ad.mainlineCopy ?? ad.headline ?? ad.description ?? "Kroger weekly ad deal"),
+        productName: cleanProductName(
+          ad.mainlineCopy ?? ad.headline ?? ad.description ?? `${context.displayName} weekly ad deal`,
+        ),
         salePriceText: formatSalePriceText(ad, salePrice, savingsAmount, savingsPercent),
         salePrice,
         regularPriceText: formatMoneyText(regularPrice),
@@ -251,7 +279,7 @@ function normalizeDeals(
         category: ad.departments?.[0]?.department ?? ad.departments?.[0]?.name ?? groups[0]?.shortDisplayName ?? groups[0]?.name,
         requiresLoyalty,
         requiresDigitalCoupon,
-        sourceUrl: KROGER_WEEKLY_AD_URL,
+        sourceUrl: context.sourceUrl,
         scrapedAt: context.scrapedAt,
       };
     })

@@ -12,8 +12,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 
-  if (body.brand !== "kroger" && body.brand !== "marianos") {
-    return Response.json({ error: 'Only brands "kroger" and "marianos" are supported by this POC.' }, { status: 400 });
+  if (!isSupportedBrand(body.brand)) {
+    return Response.json(
+      { error: 'Only Kroger-family brands "kroger", "marianos", "fred-meyer", "qfc", and "ralphs" are supported by this POC.' },
+      { status: 400 },
+    );
   }
 
   const brand = body.brand;
@@ -54,11 +57,32 @@ export async function POST(request: Request) {
 }
 
 async function runLocalScraper(brand: GroceryBrand, storeId: string) {
-  if (brand === "marianos") {
-    const { scrapeMarianosWeeklyAd } = await import("@/server/scraper/brands/marianos");
-    return scrapeMarianosWeeklyAd(storeId);
+  switch (brand) {
+    case "fred-meyer": {
+      const { scrapeFredMeyerWeeklyAd } = await import("@/server/scraper/brands/fredMeyer");
+      return scrapeFredMeyerWeeklyAd(storeId);
+    }
+    case "marianos": {
+      const { scrapeMarianosWeeklyAd } = await import("@/server/scraper/brands/marianos");
+      return scrapeMarianosWeeklyAd(storeId);
+    }
+    case "qfc": {
+      const { scrapeQfcWeeklyAd } = await import("@/server/scraper/brands/qfc");
+      return scrapeQfcWeeklyAd(storeId);
+    }
+    case "ralphs": {
+      const { scrapeRalphsWeeklyAd } = await import("@/server/scraper/brands/ralphs");
+      return scrapeRalphsWeeklyAd(storeId);
+    }
+    case "kroger": {
+      const { scrapeKrogerWeeklyAd } = await import("@/server/scraper/brands/kroger");
+      return scrapeKrogerWeeklyAd(storeId);
+    }
+    default:
+      throw new Error(`Unsupported local scraper for ${brand}.`);
   }
+}
 
-  const { scrapeKrogerWeeklyAd } = await import("@/server/scraper/brands/kroger");
-  return scrapeKrogerWeeklyAd(storeId);
+function isSupportedBrand(brand: unknown): brand is GroceryBrand {
+  return brand === "kroger" || brand === "marianos" || brand === "fred-meyer" || brand === "qfc" || brand === "ralphs";
 }
