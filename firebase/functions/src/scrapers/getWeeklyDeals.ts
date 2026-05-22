@@ -11,15 +11,17 @@ import {
 import { scrapeAldiWeeklyAd } from "./chains/aldi.js";
 import { scrapeJewelOscoWeeklyAd } from "./chains/jewelOsco.js";
 import { scrapeKrogerWeeklyAd } from "./chains/kroger.js";
+import { scrapeMarianosWeeklyAd } from "./chains/marianos.js";
 
 type WeeklyAdScraper = (store: NearbyStore) => Promise<SaleItem[]>;
 
-const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = ["aldi", "jewel-osco", "kroger"];
+const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = ["aldi", "jewel-osco", "kroger", "marianos"];
 
 const SCRAPERS: Record<SupportedStoreChain, WeeklyAdScraper> = {
   aldi: scrapeAldiWeeklyAd,
   "jewel-osco": scrapeJewelOscoWeeklyAd,
   kroger: scrapeKrogerWeeklyAd,
+  marianos: scrapeMarianosWeeklyAd,
 };
 
 export function validateWeeklyDealsRequest(body: unknown): WeeklyDealsRequest {
