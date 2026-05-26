@@ -2,6 +2,7 @@ import {
   type NearbyStore,
   type SaleItem,
   type SupportedStoreChain,
+  type WeeklyAdDealSummary,
   type WeeklyDealsRequest,
   type WeeklyDealsResponse,
   type WeeklyDealsStoreInput,
@@ -15,7 +16,7 @@ import { scrapeMarianosWeeklyAd } from "./chains/marianos.js";
 import { scrapeQfcWeeklyAd } from "./chains/qfc.js";
 import { scrapeRalphsWeeklyAd } from "./chains/ralphs.js";
 
-type WeeklyAdScraper = (store: NearbyStore) => Promise<SaleItem[]>;
+type WeeklyAdScraper = (store: NearbyStore) => Promise<Array<SaleItem | WeeklyAdDealSummary>>;
 
 const MAX_NEARBY_STORES = 3;
 const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = [
@@ -110,7 +111,7 @@ async function scrapeStoreWithRetry(store: WeeklyDealsStoreInput): Promise<Weekl
   }
 }
 
-async function runScraper(store: WeeklyDealsStoreInput): Promise<SaleItem[]> {
+async function runScraper(store: WeeklyDealsStoreInput): Promise<Array<SaleItem | WeeklyAdDealSummary>> {
   const scraper = SCRAPERS[store.company];
 
   return scraper({
