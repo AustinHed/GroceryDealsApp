@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const tabs = [
   { href: "/", label: "home" },
+  { href: "/meal-plan", label: "meal plan" },
   { href: "/test-weekly-deals", label: "test - weekly deals" },
 ];
 

@@ -1,5 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
 import type { GroceryBrand } from "@grocery-deals/shared";
+import { generateMealPlan as generateRecipes } from "./meal-planning/generateMealPlan.js";
+import { validateGenerateRecipesRequest } from "./meal-planning/validateGenerateRecipesRequest.js";
 import { scrapeKrogerFamilyWeeklyAd } from "./scrapers/chains/kroger.js";
 import { getWeeklyDeals as coordinateWeeklyDeals, validateWeeklyDealsRequest } from "./scrapers/getWeeklyDeals.js";
 
@@ -79,6 +81,31 @@ export const getWeeklyDeals = onRequest(
     } catch (error) {
       response.status(400).json({
         error: error instanceof Error ? error.message : "Invalid weekly deals request.",
+      });
+    }
+  },
+);
+
+export const generateMealPlan = onRequest(
+  {
+    cors: true,
+    memory: "1GiB",
+    secrets: ["OPENAI_API_KEY"],
+    timeoutSeconds: 300,
+  },
+  async (request, response) => {
+    if (request.method !== "POST") {
+      response.status(405).json({ error: "Use POST." });
+      return;
+    }
+
+    try {
+      const mealPlanRequest = validateGenerateRecipesRequest(request.body);
+      const result = await generateRecipes(mealPlanRequest);
+      response.json(result);
+    } catch (error) {
+      response.status(400).json({
+        error: error instanceof Error ? error.message : "Invalid recipe generation request.",
       });
     }
   },
