@@ -54,6 +54,8 @@ type KrogerAd = {
   percentOff?: number | string | null;
   pricingTemplate?: string;
   loyaltyIndicator?: string;
+  disclaimer?: string;
+  quantity?: number | string;
   uom?: string;
   images?: KrogerImage[];
   departments?: KrogerDepartment[];
@@ -240,10 +242,11 @@ function normalizeDeals(
       const rawText = buildRawText(ad, groups);
       const salePrice = toNumber(ad.salePrice);
       const regularPrice = toNumber(ad.retailPrice);
-      const savingsAmount = toNumber(ad.saveAmount);
       const savingsPercent = toNumber(ad.savePercent ?? ad.percentOff);
       const requiresDigitalCoupon = Boolean(ad.offers?.hasCoupons || groups.some(isDigitalCouponGroup));
       const requiresLoyalty = Boolean(/card|loyalty|member/i.test(ad.loyaltyIndicator ?? "") || requiresDigitalCoupon);
+      const discountType = inferKrogerDiscountType(ad, groups, requiresDigitalCoupon);
+      const savingsAmount = toNumber(ad.saveAmount) ?? deriveDigitalCouponSavings(ad, discountType, regularPrice);
 
       return {
         id: ad.id ?? randomUUID(),
@@ -258,7 +261,8 @@ function normalizeDeals(
         regularPrice,
         savingsAmount,
         savingsPercent,
-        discountType: inferKrogerDiscountType(ad, groups, requiresDigitalCoupon),
+        discountType,
+        promotionText: buildPromotionText(ad, discountType, salePrice, regularPrice),
         rawText,
         imageUrl: ad.images?.find((image) => image.url)?.url,
         category: ad.departments?.[0]?.department ?? ad.departments?.[0]?.name ?? groups[0]?.shortDisplayName ?? groups[0]?.name,
@@ -302,6 +306,58 @@ function formatSalePriceText(ad: KrogerAd, salePrice?: number, savingsAmount?: n
   if (savingsPercent !== undefined) return `${savingsPercent}% off`;
 
   return undefined;
+}
+
+function buildPromotionText(
+  ad: KrogerAd,
+  discountType: DiscountType,
+  salePrice?: number,
+  regularPrice?: number,
+): string | undefined {
+  const unitPrice = regularPrice === undefined ? undefined : `${formatMoneyText(regularPrice)}${ad.uom ? `/${ad.uom}` : ""}`;
+
+  if (discountType === "multi_buy" && toNumber(ad.quantity) && unitPrice) {
+    return `${toNumber(ad.quantity)}/${formatMoneyText(regularPrice)}`;
+  }
+
+  if (discountType === "digital_coupon" && unitPrice) {
+    const withoutCoupon = cleanDisclaimer(ad.disclaimer);
+    return withoutCoupon ? `${unitPrice} with digital coupon. ${withoutCoupon}` : `${unitPrice} with digital coupon`;
+  }
+
+  if (discountType === "loyalty" && unitPrice) {
+    const offerDetails = cleanDisclaimer(ad.underlineCopy);
+    return offerDetails ? `${unitPrice} with Card. ${offerDetails}` : `${unitPrice} with Card`;
+  }
+
+  if (discountType === "sale_price" && salePrice !== undefined && regularPrice !== undefined && salePrice !== regularPrice) {
+    return `Regular ${formatMoneyText(regularPrice)}`;
+  }
+
+  if (discountType === "bogo") {
+    return "Buy one, get one free";
+  }
+
+  return undefined;
+}
+
+function cleanDisclaimer(value?: string): string | undefined {
+  const firstSentence = value?.replace(/\s+/g, " ").trim().split("*")[0]?.trim();
+  return firstSentence || undefined;
+}
+
+function deriveDigitalCouponSavings(
+  ad: KrogerAd,
+  discountType: DiscountType,
+  couponPrice?: number,
+): number | undefined {
+  if (discountType !== "digital_coupon" || couponPrice === undefined) return undefined;
+
+  const regularPriceMatch = ad.disclaimer?.match(/price without digital coupon is up to\s+\$?(\d+(?:\.\d{1,2})?)/i);
+  const withoutCouponPrice = toNumber(regularPriceMatch?.[1]);
+  if (withoutCouponPrice === undefined || withoutCouponPrice <= couponPrice) return undefined;
+
+  return Math.round((withoutCouponPrice - couponPrice) * 100) / 100;
 }
 
 function formatMoneyText(value?: number): string | undefined {
@@ -371,7 +427,9 @@ function toWeeklyAdDealSummary(deal: WeeklyAdDeal): WeeklyAdDealSummary {
     regularPrice: deal.regularPrice,
     regularPriceText: deal.regularPriceText,
     savingsAmount: deal.savingsAmount,
+    savingsPercent: deal.savingsPercent,
     discountType: deal.discountType,
+    promotionText: deal.promotionText,
     category: deal.category,
     requiresLoyalty: deal.requiresLoyalty,
     requiresDigitalCoupon: deal.requiresDigitalCoupon,

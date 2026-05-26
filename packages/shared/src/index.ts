@@ -64,6 +64,7 @@ export type WeeklyAdDeal = {
   savingsAmount?: number;
   savingsPercent?: number;
   discountType: DiscountType;
+  promotionText?: string;
   rawText: string;
   imageUrl?: string;
   category?: string;
@@ -81,7 +82,9 @@ export type WeeklyAdDealSummary = Pick<
   | "regularPrice"
   | "regularPriceText"
   | "savingsAmount"
+  | "savingsPercent"
   | "discountType"
+  | "promotionText"
   | "category"
   | "requiresLoyalty"
   | "requiresDigitalCoupon"
@@ -173,7 +176,9 @@ export type MealPlanDeal = {
   regularPriceText?: string;
   regularPrice?: number;
   savingsAmount?: number;
+  savingsPercent?: number;
   discountType: DiscountType;
+  promotionText?: string;
   category?: string;
   requiresLoyalty?: boolean;
   requiresDigitalCoupon?: boolean;
