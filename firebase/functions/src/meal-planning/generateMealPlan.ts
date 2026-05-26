@@ -1,15 +1,13 @@
-import type { MealPlanRequest, MealPlanResponse } from "@grocery-deals/shared";
-import { createMealPlanPrompt } from "../openai/prompts.js";
+import type { GenerateRecipesRequest, GenerateRecipesResponse } from "@grocery-deals/shared";
+import { generateRecipesWithOpenAI } from "./openAiMealPlanClient.js";
+import { normalizeWeeklyDealsForMealPlanning } from "./normalizeDeals.js";
 
-export async function generateMealPlan(request: MealPlanRequest): Promise<MealPlanResponse> {
-  const prompt = createMealPlanPrompt(request);
+export async function generateMealPlan(request: GenerateRecipesRequest): Promise<GenerateRecipesResponse> {
+  const deals = normalizeWeeklyDealsForMealPlanning(request);
 
-  // Future implementation: call OpenAI with the prompt and parse a structured response.
-  void prompt;
+  if (deals.length === 0) {
+    throw new Error("No eligible weekly deals were available for recipe generation.");
+  }
 
-  return {
-    overview: "",
-    days: [],
-    shoppingNotes: [],
-  };
+  return generateRecipesWithOpenAI(request, deals);
 }

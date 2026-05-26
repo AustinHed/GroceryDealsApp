@@ -161,4 +161,66 @@ export type MealPlanResponse = {
   shoppingNotes: string[];
 };
 
+export type MealType = "lunch" | "dinner";
+
+export type MealPlanDeal = {
+  dealId: string;
+  company: SupportedStoreChain;
+  storeId: string;
+  productName: string;
+  priceText?: string;
+  salePrice?: number;
+  regularPriceText?: string;
+  regularPrice?: number;
+  savingsAmount?: number;
+  discountType: DiscountType;
+  category?: string;
+  requiresLoyalty?: boolean;
+  requiresDigitalCoupon?: boolean;
+  source: "weekly_ad";
+};
+
+export type GenerateRecipesSettings = {
+  lunchCount: number;
+  dinnerCount: number;
+  servings: 2;
+  allowPantryStaples: boolean;
+};
+
+export type GenerateRecipesRequest = {
+  stores: WeeklyDealsStoreInput[];
+  weeklyDeals: WeeklyDealsResponse;
+  settings: GenerateRecipesSettings;
+};
+
+export type GeneratedRecipeIngredient = {
+  name: string;
+  quantity: string | null;
+  dealId: string | null;
+  company: SupportedStoreChain | null;
+  storeId: string | null;
+  isPantryStaple: boolean;
+};
+
+export type GeneratedRecipe = {
+  id: string;
+  mealType: MealType;
+  title: string;
+  summary: string;
+  ingredients: GeneratedRecipeIngredient[];
+  instructions: string[];
+  expectedSavings: string;
+  dealIdsUsed: string[];
+};
+
+export type GenerateRecipesResponse = {
+  generatedAt: string;
+  recipes: GeneratedRecipe[];
+  dealIndex: Record<string, MealPlanDeal>;
+};
+
 export const MAX_NEARBY_STORES = 3;
+export const MIN_RECIPES_PER_MEAL_TYPE = 1;
+export const DEFAULT_RECIPES_PER_MEAL_TYPE = 7;
+export const MAX_RECIPES_PER_MEAL_TYPE = 14;
+export const RECIPE_SERVINGS = 2;

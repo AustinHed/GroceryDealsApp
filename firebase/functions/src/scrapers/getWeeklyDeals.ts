@@ -1,5 +1,4 @@
 import {
-  MAX_NEARBY_STORES,
   type NearbyStore,
   type SaleItem,
   type SupportedStoreChain,
@@ -18,6 +17,7 @@ import { scrapeRalphsWeeklyAd } from "./chains/ralphs.js";
 
 type WeeklyAdScraper = (store: NearbyStore) => Promise<SaleItem[]>;
 
+const MAX_NEARBY_STORES = 3;
 const SUPPORTED_CHAINS: readonly SupportedStoreChain[] = [
   "aldi",
   "jewel-osco",
